@@ -29,6 +29,10 @@ Prerequisites
    ::
 
        git clone https://github.com/hyperledger/fabric.git
+        
+       cd fabric/examples/
+       git clone https://github.com/asararatnakar/e2e_tls-kafka.git e2e
+
 
 -  Make the ``configtxgen`` tool.
 
@@ -91,7 +95,7 @@ script will generate the two configuration artifacts.
 Run the shell script
 ^^^^^^^^^^^^^^^^^^^^
 
-Make sure you are in the ``examples/e2e_cli`` directory and in your
+Make sure you are in the ``examples/e2e`` directory and in your
 vagrant environment. You can elect to pass in a unique name for your
 channel or simply execute the script without the ``channel-ID``
 parameter. If you choose not to pass in a unique name, then a channel
@@ -99,7 +103,7 @@ with the default name of ``mychannel`` will be generated.
 
 .. code:: bash
 
-    cd examples/e2e_cli
+    cd examples/e2e
     # note the <channel-ID> parm is optional
     ./generateCfgTrx.sh <channel-ID>
 
@@ -128,7 +132,7 @@ Manually generate the artifacts (optional)
 
 In your vagrant environment, navigate to the ``/common/configtx/tool``
 directory and replace the ``configtx.yaml`` file with the supplied yaml
-file in the ``/e2e_cli`` directory. Then return to the ``/e2e_cli``
+file in the ``/e2e`` directory. Then return to the ``/e2e``
 directory.
 
 .. code:: bash
@@ -144,7 +148,7 @@ directory.
 Run the end-to-end test with Docker
 -----------------------------------
 
-Make sure you are in the ``/e2e_cli`` directory. Then use docker-compose
+Make sure you are in the ``/e2e`` directory. Then use docker-compose
 to spawn the network entities and drive the tests.
 
 .. code:: bash
@@ -164,7 +168,7 @@ You should see an output identical to the following:
 
 .. code:: bash
 
-    vagrant@hyperledger-devenv:v0.3.0-4eec836:/opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli$ docker ps
+    vagrant@hyperledger-devenv:v0.3.0-4eec836:/opt/gopath/src/github.com/hyperledger/fabric/examples/e2e$ docker ps
     CONTAINER ID        IMAGE                        COMMAND                  CREATED              STATUS              PORTS                                              NAMES
     45e3e114f7a2        dev-peer3-mycc-1.0           "chaincode -peer.a..."   4 seconds ago        Up 4 seconds                                                           dev-peer3-mycc-1.0
     5970f740ad2b        dev-peer0-mycc-1.0           "chaincode -peer.a..."   24 seconds ago       Up 23 seconds                                                          dev-peer0-mycc-1.0
@@ -355,13 +359,13 @@ left of the command. For example:
         working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
       # command: /bin/bash -c './scripts/script.sh ${CHANNEL_NAME}'
 
-Save the file and return to the ``/e2e_cli`` directory.
+Save the file and return to the ``/e2e`` directory.
 
 Now restart your network:
 
 .. code:: bash
 
-    # make sure you are in the /e2e_cli directory where you docker-compose script resides
+    # make sure you are in the /e2e directory where you docker-compose script resides
     docker-compose up -d
 
 Command syntax
@@ -671,7 +675,7 @@ container with a CouchDB container:
        # make sure you are in the /fabric directory
        make couchdb
 
--  Open the ``fabric/examples/e2e_cli/docker-compose.yaml`` and un-comment
+-  Open the ``fabric/examples/e2e/docker-compose.yaml`` and un-comment
    all commented statements relating to CouchDB containers and peer container
    use of CouchDB. These instructions are are also outlined in the
    same ``docker-compose.yaml`` file. Search the file for 'couchdb' (case insensitive) references.
