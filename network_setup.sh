@@ -58,6 +58,9 @@ function networkDown () {
 	clearContainers
 	#Cleanup images
 	removeUnwantedImages
+        #remove artifacts
+	rm -rf crypto/orderer/channel.tx
+	rm -rf crypto/orderer/orderer.block
 }
 
 validateArgs
