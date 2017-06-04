@@ -1,3 +1,4 @@
-crypto/orderer/channel.tx
-crypto/orderer/orderer.block
-
+channel-artifacts/*.tx
+channel-artifacts/*.block
+crypto-config
+scripts/log.txt

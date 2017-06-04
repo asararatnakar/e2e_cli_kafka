@@ -1,193 +1,261 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 version: '2'
 
 services:
 
-  zookeeper:
-    image: hyperledger/fabric-zookeeper:x86_64-1.0.0-alpha
-    container_name: zookeeper
+  zookeeper0:
+    container_name: zookeeper0
+    extends:
+      file: base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=1
+      - ZOO_PORT=2181
+      - ZOO_SERVERS=server.1=zookeeper0:2182:2183:participant server.2=zookeeper1:3182:3183:participant server.3=zookeeper2:4182:4183:participant
+    ports:
+      - 2181:2181
+      - 2182:2182
+      - 2183:2183
+
+  zookeeper1:
+    container_name: zookeeper1
+    extends:
+      file: base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=2
+      - ZOO_PORT=3181
+      - ZOO_SERVERS=server.1=zookeeper0:2182:2183:participant server.2=zookeeper1:3182:3183:participant server.3=zookeeper2:4182:4183:participant
+    ports:
+      - 3181:3181
+      - 3182:3182
+      - 3183:3183
+
+  zookeeper2:
+    container_name: zookeeper2
+    extends:
+      file: base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=3
+      - ZOO_PORT=4181
+      - ZOO_SERVERS=server.1=zookeeper0:2182:2183:participant server.2=zookeeper1:3182:3183:participant server.3=zookeeper2:4182:4183:participant
+    ports:
+      - 4181:4181
+      - 4182:4182
+      - 4183:4183
 
   kafka0:
-    image: hyperledger/fabric-kafka:x86_64-1.0.0-alpha
+    container_name: kafka0
+    extends:
+      file: base.yaml
+      service: kafka
     environment:
       - KAFKA_BROKER_ID=0
-      - KAFKA_DEFAULT_REPLICATION_FACTOR=2
-      - KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE=false
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-    container_name: kafka0
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper0:2181,zookeeper1:2181,zookeeper2:2181
+    ports:
+      - 9092:9092
     depends_on:
-      - zookeeper
+      - zookeeper0
+      - zookeeper1
+      - zookeeper2
 
   kafka1:
-    image: hyperledger/fabric-kafka:x86_64-1.0.0-alpha
+    container_name: kafka1
+    extends:
+      file: base.yaml
+      service: kafka
     environment:
       - KAFKA_BROKER_ID=1
-      - KAFKA_DEFAULT_REPLICATION_FACTOR=2
-      - KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE=false
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-    container_name: kafka1
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper0:2181,zookeeper1:2181,zookeeper2:2181
+    ports:
+      - 9094:9092
     depends_on:
-      - zookeeper
+      - zookeeper0
+      - zookeeper1
+      - zookeeper2
 
-  ccenv:
-    image: hyperledger/fabric-ccenv:x86_64-1.0.0-alpha
-    container_name: ccenv
-
-  orderer0:
-    container_name: orderer0
-    image: hyperledger/fabric-orderer:x86_64-1.0.0-alpha
+  kafka2:
+    container_name: kafka2
+    extends:
+      file: base.yaml
+      service: kafka
     environment:
-      - ORDERER_GENERAL_LOGLEVEL=debug
-      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
-      - ORDERER_GENERAL_GENESISMETHOD=file
-      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.block
-      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
-      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/localMspConfig
-      - CONFIGTX_ORDERER_BATCHTIMEOUT=1s
-      - CONFIGTX_ORDERER_ORDERERTYPE=kafka
-      - CONFIGTX_ORDERER_KAFKA_BROKERS=[kafka0:9092,kafka1:9092]
-      # enabled TLS
-      - ORDERER_GENERAL_TLS_ENABLED=true
-      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/localMspConfig/keystore/ordererSigner.pem
-      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/localMspConfig/signcerts/orderer0Signer.pem
-      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/localMspConfig/cacerts/ordererOrg0.pem]
-    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
-    command: orderer
+      - KAFKA_BROKER_ID=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper0:2181,zookeeper1:2181,zookeeper2:2181
+    ports:
+      - 9096:9092
+    depends_on:
+      - zookeeper0
+      - zookeeper1
+      - zookeeper2
+
+  orderer0.example.com:
+    container_name: orderer0.example.com
+    extends:
+      file: base.yaml
+      service: orderer
     volumes:
-    - ./crypto/orderer:/var/hyperledger/orderer
+    - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer0.example.com/msp:/var/hyperledger/orderer/msp
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer0.example.com/tls/:/var/hyperledger/orderer/tls
+    ports:
+      - 7050:7050
     depends_on:
       - kafka0
       - kafka1
-    ports:
-      - 7050:7050
+      - kafka2
 
-  peer0:
-    container_name: peer0
+  orderer1.example.com:
+    container_name: orderer1.example.com
     extends:
-      file: peer-base/peer-base.yaml
-      service: peer-base
+      file: base.yaml
+      service: orderer
+    volumes:
+    - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/msp:/var/hyperledger/orderer/msp
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/tls/:/var/hyperledger/orderer/tls
+    ports:
+      - 8050:7050
+    depends_on:
+      - kafka0
+      - kafka1
+      - kafka2
+
+  orderer2.example.com:
+    container_name: orderer2.example.com
+    extends:
+      file: base.yaml
+      service: orderer
+    volumes:
+    - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/msp:/var/hyperledger/orderer/msp
+    - ./crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/:/var/hyperledger/orderer/tls
+    ports:
+      - 9050:7050
+    depends_on:
+      - kafka0
+      - kafka1
+      - kafka2
+
+  peer0.org1.example.com:
+    container_name: peer0.org1.example.com
+    extends:
+      file: base.yaml
+      service: peer
     environment:
-      - CORE_PEER_ID=peer0
-      - CORE_PEER_ADDRESS=peer0:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0:7051
-      - CORE_PEER_LOCALMSPID=Org0MSP
-      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/signcerts/peer0Signer.pem
-      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/msp/sampleconfig/keystore/peer0Signer.pem
-      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/cacerts/peerOrg0.pem
+      - CORE_PEER_ID=peer0.org1.example.com
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_ENDORSER_ENABLED=true
     volumes:
         - /var/run/:/host/var/run/
-        - ./crypto/peer/peer0/localMspConfig:/etc/hyperledger/fabric/msp/sampleconfig
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/etc/hyperledger/fabric/tls
     ports:
       - 7051:7051
       - 7053:7053
-    depends_on:
-      - orderer0
 
-  peer1:
-    container_name: peer1
+  peer1.org1.example.com:
+    container_name: peer1.org1.example.com
     extends:
-      file: peer-base/peer-base.yaml
-      service: peer-base
+      file: base.yaml
+      service: peer
     environment:
-      - CORE_PEER_ID=peer1
-      - CORE_PEER_ADDRESS=peer1:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0:7051
-      - CORE_PEER_LOCALMSPID=Org0MSP
-      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/signcerts/peer1Signer.pem
-      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/msp/sampleconfig/keystore/peer1Signer.pem
-      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/cacerts/peerOrg0.pem
+      - CORE_PEER_ID=peer1.org1.example.com
+      - CORE_PEER_ADDRESS=peer1.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_ENDORSER_ENABLED=false
     volumes:
         - /var/run/:/host/var/run/
-        - ./crypto/peer/peer1/localMspConfig:/etc/hyperledger/fabric/msp/sampleconfig
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/tls:/etc/hyperledger/fabric/tls
+
     ports:
       - 8051:7051
       - 8053:7053
-    depends_on:
-      - orderer0
-      - peer0
 
-  peer2:
-    container_name: peer2
+  peer0.org2.example.com:
+    container_name: peer0.org2.example.com
     extends:
-      file: peer-base/peer-base.yaml
-      service: peer-base
+      file: base.yaml
+      service: peer
     environment:
-      - CORE_PEER_ID=peer2
-      - CORE_PEER_ADDRESS=peer2:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer2:7051
-      - CORE_PEER_LOCALMSPID=Org1MSP
-      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/signcerts/peer2Signer.pem
-      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/msp/sampleconfig/keystore/peer2Signer.pem
-      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/admincerts/peerOrg1.pem
+      - CORE_PEER_ID=peer0.org2.example.com
+      - CORE_PEER_ADDRESS=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_ENDORSER_ENABLED=true
     volumes:
         - /var/run/:/host/var/run/
-        - ./crypto/peer/peer2/localMspConfig:/etc/hyperledger/fabric/msp/sampleconfig
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/etc/hyperledger/fabric/tls
     ports:
       - 9051:7051
       - 9053:7053
-    depends_on:
-      - orderer0
-      - peer0
-      - peer1
 
-  peer3:
-    container_name: peer3
+  peer1.org2.example.com:
+    container_name: peer1.org2.example.com
     extends:
-      file: peer-base/peer-base.yaml
-      service: peer-base
+      file: base.yaml
+      service: peer
     environment:
-      - CORE_PEER_ID=peer3
-      - CORE_PEER_ADDRESS=peer3:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer3:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer2:7051
-      - CORE_PEER_LOCALMSPID=Org1MSP
-      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/signcerts/peer3Signer.pem
-      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/msp/sampleconfig/keystore/peer3Signer.pem
-      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/msp/sampleconfig/cacerts/peerOrg1.pem
+      - CORE_PEER_ID=peer1.org2.example.com
+      - CORE_PEER_ADDRESS=peer1.org2.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org2.example.com:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org2.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_ENDORSER_ENABLED=false
     volumes:
         - /var/run/:/host/var/run/
-        - ./crypto/peer/peer3/localMspConfig:/etc/hyperledger/fabric/msp/sampleconfig
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/msp:/etc/hyperledger/fabric/msp
+        - ./crypto-config/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/tls:/etc/hyperledger/fabric/tls
     ports:
       - 10051:7051
       - 10053:7053
-    depends_on:
-      - orderer0
-      - peer0
-      - peer1
-      - peer2
 
   cli:
     container_name: cli
-    image: hyperledger/fabric-peer:x86_64-1.0.0-alpha
+    image: hyperledger/fabric-peer
     tty: true
     environment:
       - GOPATH=/opt/gopath
-      - CORE_PEER_ADDRESSAUTODETECT=true
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_LOGGING_LEVEL=DEBUG
-      - CORE_NEXT=true
       - CORE_PEER_ID=cli
-      - CORE_PEER_ENDORSER_ENABLED=true
-      - CORE_PEER_ADDRESS=peer0:7051
-      - CORE_PEER_GOSSIP_IGNORESECURITY=true
-      - CORE_PEER_LOCALMSPID=Org0MSP
-      - CORE_PEER_TLS_ENABLED=true
-      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig/signcerts/peer0Signer.pem
-      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig/keystore/peer0Signer.pem
-      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig/cacerts/peerOrg0.pem
-      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig
-
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_TLS_ENABLED=${TLS_ENABLED}
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
-    command: /bin/bash -c './scripts/script.sh ${CHANNEL_NAME}; '
+    command: /bin/bash -c './scripts/script.sh ${CHANNEL_NAME}; sleep $TIMEOUT'
+    #command: /bin/bash -c 'apt-get update && apt-get install -y libltdl-dev && ./scripts/script.sh ${CHANNEL_NAME}; sleep $TIMEOUT'
     volumes:
         - /var/run/:/host/var/run/
-        - ./examples/:/opt/gopath/src/github.com/hyperledger/fabric/examples/
-        - ../chaincode/go/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/go
-        - ./crypto:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - ./chaincode/go/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/go
+        - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
         - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+        - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+
     depends_on:
-      - orderer0
-      - peer0
-      - peer1
-      - peer2
-      - peer3
+      - orderer0.example.com
+      - orderer1.example.com
+      - orderer2.example.com
+      - peer0.org1.example.com
+      - peer1.org1.example.com
+      - peer0.org2.example.com
+      - peer1.org2.example.com
